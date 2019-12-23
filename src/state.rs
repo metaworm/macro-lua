@@ -1670,13 +1670,6 @@ impl State {
     }
 
     #[inline]
-    pub fn c_fn(&self, fun: unsafe extern "C" fn(State) -> c_int) -> TopRef {
-        let fun: lua_CFunction = unsafe { Some(mem::transmute(fun)) };
-        self.push_cclosure(fun, 0);
-        TopRef(self.val(-1))
-    }
-
-    #[inline]
     pub fn rust_fn(&self, fun: fn(State) -> c_int) -> TopRef {
         unsafe extern "C" fn call_rust_fn(l: *mut lua_State) -> c_int {
             let state = State::from_ptr(l);
@@ -1742,15 +1735,6 @@ impl State {
         self.set_metatable(-2);
     }
 
-    fn init_closure_metatable(t: Table, s: State) {
-        unsafe extern "C" fn closure_gc(this: State) -> c_int {
-            let closure: *mut RustClosure = mem::transmute(this.to_userdata(1));
-            ptr::drop_in_place(closure);
-            0
-        }
-        t.set("__gc", s.c_fn(closure_gc));
-    }
-
     pub fn rust_closure<F: 'static +  FnMut(State) -> c_int>(&self, closure: F) -> TopRef {
         unsafe extern "C" fn closure_callback(l: *mut lua_State) -> c_int {
             let state = State::from_ptr(l);
@@ -1761,10 +1745,13 @@ impl State {
         }
 
         let closure: RustClosure = Box::new(closure);
-        let p: &mut RustClosure = unsafe { mem::transmute(
-            self.new_userdata(mem::size_of::<RustClosure>())
-        ) };
-        self.set_or_init_metatable(Self::init_closure_metatable);
+        let p: &mut RustClosure = unsafe {
+            mem::transmute(self.new_userdata(mem::size_of::<RustClosure>()))
+        };
+        self.set_or_init_metatable(metatable!(
+            RustClosure(s: State, this: Self);
+            "__gc" () { ptr::drop_in_place(this); 0 }
+        ));
         mem::forget(mem::replace(p, closure));
         self.push_cclosure(Some(closure_callback), 1);
         TopRef(self.val(-1))

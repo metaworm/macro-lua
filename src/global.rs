@@ -9,11 +9,11 @@ pub(crate) fn init_global(this: State) {
     #[cfg(target_arch = "x86")]
     g.set("ARCH", "x86");
 
-    g.set("newuserdata", cfunction!((s, size: usize) {
+    g.set("newuserdata", cfn!((s, size: usize) {
         s.new_userdata(size); 1
     }));
 
-    g.set("topointer", cfunction!((s) {
+    g.set("topointer", cfn!((s) {
         if s.is_integer(1) {
             s.push_value(1);
         } else {
@@ -22,7 +22,7 @@ pub(crate) fn init_global(this: State) {
         1
     }));
 
-    g.set("getmem", cfunction!((s, ptr: usize) {
+    g.set("getmem", cfn!((s, ptr: usize) {
         if s.is_integer(2) {
             let size = s.to_integer(2) as usize;
             s.push_bytes(std::slice::from_raw_parts(ptr as *const u8, size));
@@ -45,7 +45,7 @@ pub(crate) fn init_global(this: State) {
         1
     }));
 
-    g.set("setmem", cfunction!((s, ptr: usize) {
+    g.set("setmem", cfn!((s, ptr: usize) {
         if s.is_integer(2) {
             let size = s.to_integer(2) as usize;
             s.push_bytes(std::slice::from_raw_parts(ptr as *const u8, size));

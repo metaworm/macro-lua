@@ -24,7 +24,7 @@ metatable! {
 
 pub(crate) fn init_thread(s: State) {
     let t = s.table(0, 4);
-    t.set("spawn", cfunction!((s) {
+    t.set("spawn", cfn!((s) {
         s.check_type(1, Type::Function);
 
         // Init the new state
@@ -60,11 +60,11 @@ pub(crate) fn init_thread(s: State) {
         return 1;
     }));
 
-    t.set("sleep", cfunction!((s, time: u64) push {
+    t.set("sleep", cfn!((s, time: u64) push {
         thread::sleep(Duration::from_millis(time));
     }));
 
-    t.set("yield_now", cfunction!((s) push {
+    t.set("yield_now", cfn!((s) push {
         thread::yield_now();
     }));
     s.global().set("thread", t.0);

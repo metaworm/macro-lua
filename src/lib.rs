@@ -212,7 +212,7 @@ impl FromIndex for ValRef {
 }
 
 #[macro_export]
-macro_rules! cfunction {
+macro_rules! cfn {
     (@unpack $s:ident $i:tt) => {};
     (@unpack $s:ident $i:tt $($v:ident : $t:ty)+) => {
         let mut i = $i;
@@ -224,7 +224,7 @@ macro_rules! cfunction {
     };
 
     (@define $l:ident $body:block) => {{
-        cfunction! { @define_fn function $l $body }
+        cfn! { @define_fn function $l $body }
         function as CFunction
     }};
 
@@ -233,19 +233,19 @@ macro_rules! cfunction {
 
     ($($name:ident ($s:ident $(,$v:ident : $t:ty)*) $($body_option:ident)? $body:block)*) => {
         $(
-            cfunction! { @define_fn $name l {
+            cfn! { @define_fn $name l {
                 let $s = $crate::State::from_ptr(l);
-                cfunction!(@unpack $s 1 $($v: $t)*);
-                cfunction!(@body_option $s $($body_option)? $body)
+                cfn!(@unpack $s 1 $($v: $t)*);
+                cfn!(@body_option $s $($body_option)? $body)
             }}
         )*
     };
 
     (($s:ident $(,$v:ident : $t:ty)*) $($body_option:ident)? $body:block) => {
-        cfunction!(@define l {
+        cfn!(@define l {
             let $s = $crate::State::from_ptr(l);
-            cfunction!(@unpack $s 1 $($v: $t)*);
-            cfunction!(@body_option $s $($body_option)? $body)
+            cfn!(@unpack $s 1 $($v: $t)*);
+            cfn!(@body_option $s $($body_option)? $body)
         })
     };
 }
@@ -253,11 +253,11 @@ macro_rules! cfunction {
 #[macro_export]
 macro_rules! metatable {
     (@method, $t:ty, ($s:ident, $this:ident, $($v:ident : $a:ty),*) $($body_option:ident)? $body:block) => {
-        cfunction!(@define l {
+        cfn!(@define l {
             let $s = $crate::State::from_ptr(l);
             let $this: &mut $t = std::mem::transmute($s.to_userdata(1));
-            cfunction!(@unpack $s 2 $($v: $a)*);
-            cfunction!(@body_option $s $($body_option)? $body)
+            cfn!(@unpack $s 2 $($v: $a)*);
+            cfn!(@body_option $s $($body_option)? $body)
         })
     };
 

@@ -101,6 +101,14 @@ impl<T: ToLua> ToLua for Vec<T> {
     }
 }
 
+// impl<I: Iterator<Item=T>> ToLua for I where T: ToLua {
+//     fn to_lua(self, state: &State) {
+//         let r = state.table(0, 0);
+//         let mut i = 1;
+//         for e in self { r.seti(i, e); i += 1; }
+//     }
+// }
+
 /// Trait for types that can be taken from the Lua stack.
 ///
 /// It is important that implementors of this trait ensure that `from_lua`
