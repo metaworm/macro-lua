@@ -93,6 +93,14 @@ impl<T: ToLua> ToLua for Option<T> {
     }
 }
 
+impl<T: ToLua> ToLua for Vec<T> {
+    fn to_lua(self, state: &State) {
+        let r = state.table(self.len() as i32, 0);
+        let mut i = 1;
+        for e in self.into_iter() { r.seti(i, e); i += 1; }
+    }
+}
+
 /// Trait for types that can be taken from the Lua stack.
 ///
 /// It is important that implementors of this trait ensure that `from_lua`
