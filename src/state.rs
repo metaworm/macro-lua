@@ -1798,6 +1798,17 @@ impl State {
         T::COUNT as c_int
     }
 
+    #[inline]
+    pub fn iter_to_array<T>(&self, iter: impl Iterator<Item = T>, callback: impl Fn(T)) -> i32 {
+        let r = self.table(0, 0);
+        let mut i = 1;
+        for t in iter {
+            callback(t);
+            r.seti(i, TopRef(r.0)); i += 1;
+        }
+        1
+    }
+
     #[inline(always)]
     pub fn balance_with<T, F: FnMut(State) -> T>(&self, mut callback: F) -> T {
         let top = self.get_top();

@@ -283,3 +283,19 @@ macro_rules! metatable {
     (const $name:ident = $($rest:tt)*) => { const $name: InitMetatable = metatable!($($rest)*); };
     (static $name:ident = $($rest:tt)*) => { static $name: InitMetatable = metatable!($($rest)*); };
 }
+
+#[macro_export]
+macro_rules! struct_to_table {
+    (@count) => { 0 };
+    (@count $t:ident $(tts:ident)*) => { struct_to_table!(@count $($tts)*) + 1 };
+
+    (@set $table:ident, $t:ident, $field:ident) => { $table.set(stringify!($field), $t.$field); };
+    (@set $table:ident, $t:ident, $field:ident, $expr:expr) => { $table.set(stringify!($field), $expr); };
+
+    ($s:ident, $t:ident; $($field:ident $(= $expr:expr)?),*) => {{
+        let t = $s.table(0, 0); // TODO
+        $(struct_to_table!(@set t, $t, $field $(, $expr)?);)*
+    }};
+
+    ($s:ident, |$t:ident| $($tts:tt)*) => { |$t| struct_to_table!($s, $t; $($tts)*) };
+}
