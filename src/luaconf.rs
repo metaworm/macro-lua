@@ -2,10 +2,9 @@
 use std::mem::size_of;
 use libc::c_int;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub const LUAI_MAXSTACK: i32 = 1000000;
-#[cfg(target_arch = "x86")]
-pub const LUAI_MAXSTACK: i32 = 15000;
+// pub const LUAI_MAXSTACK: i32 = 15000;
 
 pub const LUA_EXTRASPACE: i32 = size_of::<usize>() as i32;
 pub const LUA_REGISTRYINDEX: i32 = -LUAI_MAXSTACK - 1000;
