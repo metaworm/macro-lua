@@ -1814,4 +1814,8 @@ impl State {
         self.set_top(top);
         result
     }
+
+    pub fn raise_error(&self, e: impl std::fmt::Debug) -> ! {
+        self.push_string(&format!("{:?}", e)); self.error()
+    }
 }
