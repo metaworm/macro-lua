@@ -211,6 +211,11 @@ impl FromIndex for ValRef {
     fn from_lua(s: &State, index: Index) -> ValRef { ValRef { state: *s, index } }
 }
 
+impl FromIndex for Value {
+    #[inline]
+    fn from_lua(s: &State, index: Index) -> Value { s.value(index) }
+}
+
 #[macro_export]
 macro_rules! cfn {
     (@unpack $s:ident $i:tt) => {};

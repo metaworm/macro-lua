@@ -117,23 +117,38 @@ pub enum Type {
     Function = LUA_TFUNCTION as isize,
     Userdata = LUA_TUSERDATA as isize,
     Thread = LUA_TTHREAD as isize,
+    Invalid,
 }
 
 impl Type {
-    fn from_c_int(i: c_int) -> Option<Type> {
+    fn from_c_int(i: c_int) -> Type {
         match i {
-            LUA_TNIL => Some(Type::Nil),
-            LUA_TBOOLEAN => Some(Type::Boolean),
-            LUA_TLIGHTUSERDATA => Some(Type::LightUserdata),
-            LUA_TNUMBER => Some(Type::Number),
-            LUA_TSTRING => Some(Type::String),
-            LUA_TTABLE => Some(Type::Table),
-            LUA_TFUNCTION => Some(Type::Function),
-            LUA_TUSERDATA => Some(Type::Userdata),
-            LUA_TTHREAD => Some(Type::Thread),
-            _ => None
+            LUA_TNIL => Type::Nil,
+            LUA_TBOOLEAN => Type::Boolean,
+            LUA_TLIGHTUSERDATA => Type::LightUserdata,
+            LUA_TNUMBER => Type::Number,
+            LUA_TSTRING => Type::String,
+            LUA_TTABLE => Type::Table,
+            LUA_TFUNCTION => Type::Function,
+            LUA_TUSERDATA => Type::Userdata,
+            LUA_TTHREAD => Type::Thread,
+            _ => Type::Invalid,
         }
     }
+}
+
+pub enum Value {
+    None,
+    Nil,
+    Int(LUA_INTEGER),
+    Num(LUA_NUMBER),
+    Str(&'static str),
+    Bool(bool),
+    LightUserdata,
+    Table,
+    Function,
+    Userdata,
+    Thread,
 }
 
 /// Represents all built-in libraries
@@ -542,7 +557,7 @@ impl State {
 
     /// Maps to `lua_type`.
     #[inline]
-    pub fn type_of(&self, index: Index) -> Option<Type> {
+    pub fn type_of(&self, index: Index) -> Type {
         let result = unsafe { lua_type(self.0, index) };
         Type::from_c_int(result)
     }
@@ -726,13 +741,13 @@ impl State {
         let ty = unsafe {
             lua_getglobal(self.0, c_str.as_ptr())
         };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_gettable`.
     pub fn get_table(&mut self, index: Index) -> Type {
         let ty = unsafe { lua_gettable(self.0, index) };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_getfield`.
@@ -741,7 +756,7 @@ impl State {
         let ty = unsafe {
             lua_getfield(self.0, index, c_str.as_ptr())
         };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_geti`.
@@ -749,26 +764,26 @@ impl State {
         let ty = unsafe {
             lua_geti(self.0, index, i)
         };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// [-1, +1, -] `lua_rawget`.
     pub fn raw_get(&self, index: Index) -> Type {
         let ty = unsafe { lua_rawget(self.0, index) };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_rawgeti`.
     pub fn raw_geti(&self, index: Index, n: lua_Integer) -> Type {
         let ty = unsafe { lua_rawgeti(self.0, index, n) };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_rawgetp`.
     #[inline]
     pub fn raw_getp<T>(&self, index: Index, p: *const T) -> Type {
         let ty = unsafe { lua_rawgetp(self.0, index, mem::transmute(p)) };
-        Type::from_c_int(ty).unwrap()
+        Type::from_c_int(ty)
     }
 
     /// Maps to `lua_createtable`.
@@ -807,7 +822,7 @@ impl State {
     /// Maps to `lua_getuservalue`.
     pub fn get_uservalue(&self, idx: Index) -> Type {
         let result = unsafe { lua_getuservalue(self.0, idx) };
-        Type::from_c_int(result).unwrap()
+        Type::from_c_int(result)
     }
 
     //===========================================================================
@@ -1624,8 +1639,7 @@ impl State {
 
     /// Maps to `luaL_typename`.
     pub fn typename_at(&self, n: Index) -> &'static str {
-        let typeid = self.type_of(n).unwrap();
-        self.typename_of(typeid)
+        self.typename_of(self.type_of(n))
     }
 
     // luaL_dofile and luaL_dostring implemented above
@@ -1718,7 +1732,7 @@ impl State {
         let metatable = reg.getp(p);
         if metatable.is_nil() {
             callback(self.table(0, 0), *self);
-            assert!(self.type_of(-1) == Some(Type::Table));
+            assert!(self.type_of(-1) == Type::Table);
             reg.setp(p, self.val(-1));
             self.replace(-2);
         }
@@ -1728,7 +1742,7 @@ impl State {
     #[inline]
     pub fn set_or_init_metatable(&self, callback: InitMetatable) {
         let ty = self.type_of(-1);
-        assert!(ty == Some(Type::Userdata) || ty == Some(Type::Table));
+        assert!(ty == Type::Userdata || ty == Type::Table);
         self.get_or_init_metatable(callback);
         self.set_metatable(-2);
     }
@@ -1817,5 +1831,23 @@ impl State {
 
     pub fn raise_error(&self, e: impl std::fmt::Debug) -> ! {
         self.push_string(&format!("{:?}", e)); self.error()
+    }
+
+    pub fn value(&self, i: Index) -> Value {
+        match unsafe { lua_type(self.0, i) } {
+            LUA_TNONE => Value::None,
+            LUA_TNIL => Value::Nil,
+            LUA_TNUMBER => if self.is_integer(i) {
+                Value::Int(self.to_integer(i))
+            } else { Value::Num(self.to_number(i)) },
+            LUA_TSTRING => Value::Str(self.to_str(i).unwrap()),
+            LUA_TBOOLEAN => Value::Bool(self.to_bool(i)),
+            LUA_TLIGHTUSERDATA => Value::LightUserdata,
+            LUA_TTABLE => Value::Table,
+            LUA_TFUNCTION => Value::Function,
+            LUA_TUSERDATA => Value::Userdata,
+            LUA_TTHREAD => Value::Thread,
+            _ => panic!(""),
+        }
     }
 }
