@@ -235,23 +235,23 @@ macro_rules! cfn {
 
     (@body_option $s:ident $body:block) => { $body };
     (@body_option $s:ident push $body:block ) => { $s.pushx($body) };
-
-    ($($name:ident ($s:ident $(,$v:ident : $t:ty)*) $($body_option:ident)? $body:block)*) => {
-        $(
-            cfn! { @define_fn $name l {
-                let $s = $crate::State::from_ptr(l);
-                cfn!(@unpack $s 1 $($v: $t)*);
-                cfn!(@body_option $s $($body_option)? $body)
-            }}
-        )*
-    };
+    (@body_option $s:ident r0 $body:block) => { $body; return 0; };
+    (@body_option $s:ident r1 $body:block) => { $body; return 1; };
 
     (($s:ident $(,$v:ident : $t:ty)*) $($body_option:ident)? $body:block) => {
         cfn!(@define l {
             let $s = $crate::State::from_ptr(l);
             cfn!(@unpack $s 1 $($v: $t)*);
-            cfn!(@body_option $s $($body_option)? $body)
+            cfn!{@body_option $s $($body_option)? $body}
         })
+    };
+
+    (|$s:ident $(,$v:ident : $t:ty)*| $($body_option:ident)? $body:block) => {
+        cfn! { @define l {
+            let $s = $crate::State::from_ptr(l);
+            cfn!(@unpack $s 1 $($v: $t)*);
+            cfn!{@body_option $s $($body_option)? $body}
+        }}
     };
 }
 

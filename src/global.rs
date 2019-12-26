@@ -9,17 +9,16 @@ pub(crate) fn init_global(this: State) {
     #[cfg(target_arch = "x86")]
     g.set("ARCH", "x86");
 
-    g.set("newuserdata", cfn!((s, size: usize) {
-        s.new_userdata(size); 1
+    g.set("newuserdata", cfn!(|s, size: usize| r1 {
+        s.new_userdata(size);
     }));
 
-    g.set("topointer", cfn!((s) {
+    g.set("topointer", cfn!(|s| r1 {
         if s.is_integer(1) {
             s.push_value(1);
         } else {
             s.push_integer(s.to_pointer(1) as lua_Integer);
-        }
-        1
+        };
     }));
 
     g.set("getmem", cfn!((s, ptr: usize) {
