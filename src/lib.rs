@@ -60,6 +60,9 @@ impl ValRef {
 
     #[inline]
     pub fn to_bool(&self) -> bool { self.state.to_bool(self.index) }
+
+    #[inline]
+    pub fn check_type(&self, ty: Type) { self.state.check_type(self.index, ty); }
 }
 
 pub struct TopRef(pub ValRef);
@@ -77,14 +80,14 @@ impl Deref for ValRef {
 pub struct Table(pub ValRef);
 
 impl Table {
-    pub fn geti(&self, i: lua_Integer) -> ValRef {
-        self.0.geti(self.0.index, i);
+    pub fn geti(&self, i: impl Into<lua_Integer>) -> ValRef {
+        self.0.geti(self.0.index, i.into());
         self.0.val(-1)
     }
 
-    pub fn seti<V: ToLua>(&self, i: lua_Integer, v: V) {
+    pub fn seti<V: ToLua>(&self, i: impl Into<lua_Integer>, v: V) {
         v.to_lua(&self.0);
-        self.0.seti(self.0.index, i);
+        self.0.seti(self.0.index, i.into());
     }
 
     pub fn get(&self, k: &str) -> ValRef {

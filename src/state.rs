@@ -761,9 +761,7 @@ impl State {
 
     /// Maps to `lua_geti`.
     pub fn geti(&self, index: Index, i: lua_Integer) -> Type {
-        let ty = unsafe {
-            lua_geti(self.0, index, i)
-        };
+        let ty = unsafe { lua_geti(self.0, index, i) };
         Type::from_c_int(ty)
     }
 
