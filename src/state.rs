@@ -1808,6 +1808,18 @@ impl State {
         T::COUNT as c_int
     }
 
+    /// [-0, +1, -]
+    pub fn iterator<T: ToLua>(&self, iter: BoxIter<T>) -> c_int {
+        type BoxIterT = BoxIter<usize>;
+        self.push_userdata(iter, Some(
+            metatable!(
+                BoxIterT(s: State, this: Self);
+                "__gc" () { std::ptr::drop_in_place(this); 0 }
+            )
+        ));
+        self.push_cclosure(Some(Iter::<T>::lua_fn), 1); 1
+    }
+
     #[inline]
     pub fn iter_to_array<T>(&self, iter: impl Iterator<Item = T>, callback: impl Fn(T)) -> i32 {
         let r = self.table(0, 0);
@@ -1847,5 +1859,21 @@ impl State {
             LUA_TTHREAD => Value::Thread,
             _ => panic!(""),
         }
+    }
+}
+
+use std::marker::PhantomData;
+pub(crate) struct Iter<T> {
+    t1: PhantomData<T>,
+}
+
+type BoxIter<T> = Box::<dyn Iterator<Item = T>>;
+
+impl<T: ToLua> Iter<T> where {
+    pub unsafe extern "C" fn lua_fn(l: *mut lua_State) -> c_int {
+        let state = State::from_ptr(l);
+        let p = state.to_userdata(ffi::lua_upvalueindex(1));
+        let iter: &mut BoxIter<T> = mem::transmute(p);
+        if let Some(v) = iter.next() { state.push(v); 1 } else { 0 }
     }
 }
