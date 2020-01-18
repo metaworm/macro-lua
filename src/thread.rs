@@ -5,7 +5,10 @@ use std::thread;
 use std::ptr;
 use std::time::Duration;
 use std::sync::mpsc::{channel, Sender, Receiver};
+#[cfg(target_os = "windows")]
 use std::os::windows::io::{RawHandle, IntoRawHandle};
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::thread::RawPthread as RawHandle;
 
 struct RustThread {
     state: State,
@@ -21,6 +24,11 @@ metatable! {
     "handle" () push { this.handle as u64 }
     "__gc" () { 0 }
 }
+
+#[cfg(target_os = "windows")]
+const RAW_NULL: RawHandle = ptr::null_mut();
+#[cfg(not(target_os = "windows"))]
+const RAW_NULL: RawHandle = 0;
 
 pub(crate) fn init_thread(s: State) {
     let t = s.table(0, 4);
@@ -39,7 +47,7 @@ pub(crate) fn init_thread(s: State) {
             r_state: c_reg.reference(s.val(-1)),
             r_udata: NOREF,
             recv_end: receiver,
-            handle: ptr::null_mut(),
+            handle: RAW_NULL,
         }, Some(METATABLE));
         thread.r_udata = c_reg.reference(s.val(-1));
 
@@ -56,7 +64,16 @@ pub(crate) fn init_thread(s: State) {
             state.c_reg().unreference(r_udata);
             sender.send(true);
         });
-        thread.handle = h.into_raw_handle(); 
+
+        #[cfg(target_os = "windows")] {
+            thread.handle = h.into_raw_handle(); 
+        }
+        #[cfg(target_os = "unix")] {
+            thread.handle = h.as_pthread_t(); 
+        }
+        #[cfg(target_os = "linux")] {
+            thread.handle = 0; 
+        }
         return 1;
     }));
 

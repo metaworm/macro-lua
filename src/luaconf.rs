@@ -2,7 +2,7 @@
 use std::mem::size_of;
 use libc::c_int;
 
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+// #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 pub const LUAI_MAXSTACK: i32 = 1000000;
 // pub const LUAI_MAXSTACK: i32 = 15000;
 

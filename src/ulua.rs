@@ -7,8 +7,13 @@ struct SpinLock {
     locked: AtomicBool,
 }
 
+#[cfg(target_os = "windows")]
 #[inline]
 fn asm_pause() { unsafe { asm!("pause"::::); }}
+
+#[cfg(not(target_os = "windows"))]
+#[inline]
+fn asm_pause() {}
 
 impl SpinLock {
     pub const fn new() -> SpinLock {

@@ -1843,6 +1843,13 @@ impl State {
         self.push_string(&format!("{:?}", e)); self.error()
     }
 
+    pub fn push_result(&self, r: Result<impl ToLua, impl std::fmt::Debug>, raise: bool) -> c_int {
+        match r {
+            Ok(v) => { self.push(v); 1 }
+            Err(e) => if raise { self.raise_error(e); } else { self.push_nil(); self.push_string(&format!("{:?}", e)); 2 }
+        }
+    }
+
     pub fn value(&self, i: Index) -> Value {
         match unsafe { lua_type(self.0, i) } {
             LUA_TNONE => Value::None,
