@@ -6,3 +6,6 @@ edition = "2018"
 [dependencies]
 bitflags = '0.1'
 libc = '0.2'
+
+[build-dependencies]
+cc = '*'
