@@ -153,11 +153,17 @@ impl FromLua for Number {
 
 impl FromLua for bool {
     fn from_lua(state: &State, index: Index) -> Option<bool> {
+        Some(state.to_bool(index))
+    }
+}
+
+pub struct StrictBool(pub bool);
+
+impl FromLua for StrictBool {
+    fn from_lua(state: &State, index: Index) -> Option<StrictBool> {
         if state.is_bool(index) {
-            Some(state.to_bool(index))
-        } else {
-            None
-        }
+            Some(StrictBool(state.to_bool(index)))
+        } else { None }
     }
 }
 
